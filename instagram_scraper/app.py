@@ -18,6 +18,7 @@ import socket
 import sys
 import textwrap
 import time
+import random
 
 from urllib.parse import urlparse
 
@@ -161,6 +162,7 @@ class InstagramScraper(object):
             raise
 
     def sleep(self, secs):
+        secs = round(secs + secs * random.random())
         min_delay = 1
         for _ in range(secs // min_delay):
             time.sleep(min_delay)
@@ -517,6 +519,8 @@ class InstagramScraper(object):
                     if self.maximum != 0 and iter >= self.maximum:
                         break
 
+                    self.sleep(2)
+
                 if future_to_item:
                     for future in tqdm.tqdm(concurrent.futures.as_completed(future_to_item),
                                             total=len(future_to_item),
@@ -872,6 +876,15 @@ class InstagramScraper(object):
             if self.maximum != 0 and iter >= self.maximum:
                 break
 
+            indicator = iter % 10
+            indicator2 = iter % 100
+            if indicator == 0 and iter != 0:
+                self.logger.info("have a long sleep")
+                self.sleep(60)
+            if indicator2 == 0 and iter != 0:
+                self.logger.info("have a extra long sleep")
+                self.sleep(300)
+
     def get_shared_data_userinfo(self, username=''):
         """Fetches the user's metadata."""
         try:
@@ -1080,6 +1093,7 @@ class InstagramScraper(object):
                                 downloaded_before = downloaded
                                 headers['Range'] = 'bytes={0}-'.format(downloaded_before)
 
+                                self.logger.info("fetching " + url)
                                 with self.session.get(url, cookies=self.cookies, headers=headers, stream=True, timeout=CONNECT_TIMEOUT) as response:
                                     if response.status_code == 404 or response.status_code == 410:
                                         #on 410 error see issue #343
@@ -1546,6 +1560,8 @@ def main():
     if args.retry_forever:
         global MAX_RETRIES
         MAX_RETRIES = sys.maxsize
+
+    random.seed()
 
     scraper = InstagramScraper(**vars(args))
 
